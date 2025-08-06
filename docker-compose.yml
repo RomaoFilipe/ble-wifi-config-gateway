@@ -1,0 +1,71 @@
+version: "3.9"
+
+services:
+  sensor_gateway:
+    build:
+      context: ./gateway_core
+    container_name: iot_sensor_gateway
+    volumes:
+      - ./gateway_core:/app
+      - ./shared:/shared
+    environment:
+      - API_URL=${API_URL}
+      - API_TOKEN=${API_TOKEN}
+      - MQTT_BROKER=mosquitto
+      - MQTT_PORT=1883
+    depends_on:
+      - mosquitto
+    restart: always
+    networks:
+      - iot_net
+
+  ble_scanner:
+    build:
+      context: ./ble_module
+      dockerfile: Dockerfile
+    container_name: iot_ble_scanner
+    volumes:
+      - ./ble_module:/app
+      - ./shared:/shared
+    environment:
+      - API_URL=${API_URL}
+      - API_TOKEN=${API_TOKEN}
+    privileged: true                  # Acesso ao Bluetooth real (ex: /dev/hci0)
+    network_mode: host                # Necessário para BLE funcionar corretamente
+    restart: always
+
+  mosquitto:
+    image: eclipse-mosquitto:latest
+    container_name: mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
+    restart: always
+    networks:
+      - iot_net
+
+  web_ble_config:
+    image: nginx:alpine
+    container_name: web_ble_config
+    volumes:
+      - ./web_config:/usr/share/nginx/html:ro
+    ports:
+      - "8080:80"
+    restart: always
+    networks:
+      - iot_net
+
+  watchdog:
+    build:
+      context: ./watchdog
+    container_name: gateway_iot_watchdog
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: always
+    networks:
+      - iot_net
+
+networks:
+  iot_net:
+    driver: bridge
