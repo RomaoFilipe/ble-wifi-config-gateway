@@ -1,50 +1,7 @@
 version: "3.9"
 
 services:
-  sensor_gateway:
-    build:
-      context: ./gateway_core
-    container_name: iot_sensor_gateway
-    volumes:
-      - ./gateway_core:/app
-      - ./shared:/shared
-    environment:
-      - API_URL=${API_URL}
-      - API_TOKEN=${API_TOKEN}
-      - MQTT_BROKER=mosquitto
-      - MQTT_PORT=1883
-    depends_on:
-      - mosquitto
-    restart: always
-    networks:
-      - iot_net
-
-  ble_scanner:
-    build:
-      context: ./ble_module
-      dockerfile: Dockerfile
-    container_name: iot_ble_scanner
-    volumes:
-      - ./ble_module:/app
-      - ./shared:/shared
-    environment:
-      - API_URL=${API_URL}
-      - API_TOKEN=${API_TOKEN}
-    privileged: true                  # Acesso ao Bluetooth real (ex: /dev/hci0)
-    network_mode: host                # Necessário para BLE funcionar corretamente
-    restart: always
-
-  mosquitto:
-    image: eclipse-mosquitto:latest
-    container_name: mosquitto
-    ports:
-      - "1883:1883"
-    volumes:
-      - ./mqtt/mosquitto.conf:/mosquitto/config/mosquitto.conf
-    restart: always
-    networks:
-      - iot_net
-
+  # 🌐 Frontend estático (por ex. página de configuração BLE)
   web_ble_config:
     image: nginx:alpine
     container_name: web_ble_config
@@ -56,15 +13,30 @@ services:
     networks:
       - iot_net
 
+  # 🐶 Watchdog para monitorizar/recuperar containers
   watchdog:
     build:
       context: ./watchdog
+      dockerfile: Dockerfile
     container_name: gateway_iot_watchdog
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     restart: always
     networks:
       - iot_net
+
+  # ⏱️ Worker de agendamentos de irrigação (loop contínuo)
+  cron_worker:
+    build:
+      context: .
+      dockerfile: cron_worker/Dockerfile.cron
+    container_name: cron_worker
+    restart: unless-stopped
+    env_file:
+      - ./cron_worker/.env         # cria este ficheiro com RAILS_API_URL, API_TOKEN, DATABASE_URL, MQTT_BROKER, MQTT_PORT, TZ
+    networks:
+      - iot_net
+    # Broker é EXTERNO (ex.: 13.48.48.4) → sem depends_on
 
 networks:
   iot_net:

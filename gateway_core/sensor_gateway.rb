@@ -3,9 +3,18 @@ require 'mqtt'
 require 'json'
 require 'net/http'
 
-puts "🚀 Sensor Gateway a iniciar..."
+require 'logger'
 
-broker_host = ENV['MQTT_BROKER'] || 'localhost'
+logfile = File.open('gateway.log', 'a')
+logfile.sync = true
+logger = Logger.new(logfile)
+logger.level = Logger::INFO
+
+puts "🚀 Sensor Gateway a iniciar..."
+logger.info "🚀 Sensor Gateway a iniciar..."
+
+
+broker_host = ENV['MQTT_BROKER'] ||'localhost'
 broker_port = (ENV['MQTT_PORT'] || 1883).to_i
 api_url = ENV['API_URL']
 token = ENV['API_TOKEN']

@@ -1,0 +1,23 @@
+# Dockerfile.cron
+FROM ruby:3.2
+
+ENV TZ=Europe/Lisbon
+
+WORKDIR /app
+
+# Dependências nativas (pg)
+RUN apt-get update -qq && apt-get install -y build-essential libpq-dev tzdata nodejs && rm -rf /var/lib/apt/lists/*
+
+# Bundler + cache
+COPY cron_worker/Gemfile cron_worker/Gemfile.lock ./
+RUN gem install bundler && \
+    bundle config set path /usr/local/bundle && \
+    bundle install --jobs 4
+
+# Código do worker
+COPY cron_worker/Rakefile Rakefile
+COPY cron_worker/models.rb models.rb
+COPY cron_worker/lib lib
+
+# Loop a cada minuto
+CMD ["bash", "-c", "while true; do echo \"⏰ [$(date '+%H:%M')] Verificando agendamentos...\"; bundle exec rake irrigation:run; sleep 60; done"]

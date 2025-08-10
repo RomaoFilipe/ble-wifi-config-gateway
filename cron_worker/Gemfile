@@ -1,0 +1,9 @@
+# cron_worker/Gemfile
+source "https://rubygems.org"
+
+gem "pg"
+gem "mqtt"
+gem "dotenv"
+gem "rake"
+gem "activerecord"
+gem "activesupport"

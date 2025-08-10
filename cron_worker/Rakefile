@@ -1,0 +1,3 @@
+require "rake"
+require_relative "models"
+load "lib/tasks/irrigation_scheduler.rake"
